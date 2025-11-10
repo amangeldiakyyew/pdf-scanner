@@ -204,24 +204,49 @@ async function downloadZip(namingMode) {
         const response = await fetch(`/api/download-zip/${namingMode}`);
         
         if (!response.ok) {
-            showNotification('ZIP dosyası oluşturulamadı', 'error');
+            const errorData = await response.json().catch(() => ({}));
+            showNotification(errorData.error || 'ZIP dosyası oluşturulamadı', 'error');
             return;
         }
 
         const blob = await response.blob();
+        
+        // Validate blob
+        if (!blob || blob.size === 0) {
+            showNotification('ZIP dosyası boş', 'error');
+            return;
+        }
+
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
+        a.style.display = 'none';
         a.href = url;
         a.download = `${currentClass}_Raporlar_${namingMode === 'schoolNo' ? 'OkulNo' : 'Isim'}.zip`;
+        
         document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        
+        // Try click, with setTimeout fallback for some browsers
+        try {
+            a.click();
+        } catch (clickError) {
+            console.warn('Direct click failed, using setTimeout fallback', clickError);
+            setTimeout(() => {
+                a.click();
+            }, 0);
+        }
+        
+        // Clean up after a delay
+        setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            if (a.parentNode) {
+                document.body.removeChild(a);
+            }
+        }, 100);
 
         showNotification('ZIP dosyası indiriliyor', 'success');
     } catch (error) {
         console.error('Download error:', error);
-        showNotification('İndirme sırasında hata oluştu', 'error');
+        showNotification('İndirme sırasında hata oluştu: ' + error.message, 'error');
     }
 }
 
@@ -231,34 +256,65 @@ async function downloadSinglePdf(reportId) {
         const response = await fetch(`/api/download-pdf/${reportId}`);
         
         if (!response.ok) {
-            showNotification('PDF indirilemedi', 'error');
+            const errorData = await response.json().catch(() => ({}));
+            showNotification(errorData.error || 'PDF indirilemedi', 'error');
             return;
         }
 
         const blob = await response.blob();
+        
+        // Validate blob
+        if (!blob || blob.size === 0) {
+            showNotification('PDF dosyası boş', 'error');
+            return;
+        }
+
         const contentDisposition = response.headers.get('Content-Disposition');
         let fileName = 'report.pdf';
         
         if (contentDisposition) {
-            const matches = /filename="(.+)"/.exec(contentDisposition);
-            if (matches && matches[1]) {
-                fileName = matches[1];
+            // Try to extract filename from Content-Disposition header
+            // Support both standard and RFC 5987 formats
+            const filenameMatch = /filename\*=UTF-8''([^;]+)/.exec(contentDisposition) ||
+                                 /filename="([^"]+)"/.exec(contentDisposition) ||
+                                 /filename=([^;]+)/.exec(contentDisposition);
+            if (filenameMatch && filenameMatch[1]) {
+                fileName = decodeURIComponent(filenameMatch[1]);
             }
         }
 
+        // Create download link
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
+        a.style.display = 'none';
         a.href = url;
         a.download = fileName;
+        
+        // Add to document, click, and clean up
         document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        
+        // Try click, with setTimeout fallback for some browsers
+        try {
+            a.click();
+        } catch (clickError) {
+            console.warn('Direct click failed, using setTimeout fallback', clickError);
+            setTimeout(() => {
+                a.click();
+            }, 0);
+        }
+        
+        // Clean up after a delay to ensure download starts
+        setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            if (a.parentNode) {
+                document.body.removeChild(a);
+            }
+        }, 100);
 
         showNotification('PDF indiriliyor', 'success');
     } catch (error) {
         console.error('Download error:', error);
-        showNotification('İndirme sırasında hata oluştu', 'error');
+        showNotification('İndirme sırasında hata oluştu: ' + error.message, 'error');
     }
 }
 

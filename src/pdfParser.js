@@ -8,6 +8,49 @@ const EXACT_MATCH_LIMIT = 10;
 const CONTEXT_CHAR_LIMIT = 10;
 
 /**
+ * Extract text from a single PDF page
+ * @param {PDFDocument} pdfDoc - Already loaded PDF document
+ * @param {number} pageNum - Page number (0-indexed)
+ * @returns {Promise<string>} Page text
+ */
+async function extractPageText(pdfDoc, pageNum) {
+    // Suppress console warnings from pdf-parse
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    console.warn = () => {};
+    console.error = (msg) => {
+        // Only suppress "TT:" warnings, allow other errors
+        if (typeof msg === 'string' && msg.startsWith('TT:')) {
+            return;
+        }
+        originalError(msg);
+    };
+
+    try {
+        const options = {
+            max: 1,
+            pagerender: (pageData) => {
+                return pageData.getTextContent().then((textContent) => {
+                    return textContent.items.map(item => item.str).join(' ');
+                });
+            }
+        };
+
+        // Create single-page PDF
+        const singlePageDoc = await PDFDocument.create();
+        const [copiedPage] = await singlePageDoc.copyPages(pdfDoc, [pageNum]);
+        singlePageDoc.addPage(copiedPage);
+        const singlePageBytes = await singlePageDoc.save();
+        
+        const data = await pdfParse(singlePageBytes, options);
+        return data.text;
+    } finally {
+        console.warn = originalWarn;
+        console.error = originalError;
+    }
+}
+
+/**
  * Parse PDF and extract individual student pages
  * @param {Buffer} pdfBuffer - PDF file buffer
  * @param {Object} studentInfo - Student information object
@@ -15,8 +58,7 @@ const CONTEXT_CHAR_LIMIT = 10;
  */
 export async function parsePdfForStudents(pdfBuffer, studentInfo) {
     try {
-        // Parse PDF text
-        const data = await pdfParse(pdfBuffer);
+        // Load PDF document once
         const pdfDoc = await PDFDocument.load(pdfBuffer);
         const totalPages = pdfDoc.getPageCount();
 
@@ -36,7 +78,7 @@ export async function parsePdfForStudents(pdfBuffer, studentInfo) {
             patterns.push(forwardPattern);
 
             // Reverse pattern
-            const reversePattern = nameParts.reverse().join('\\s*');
+            const reversePattern = [...nameParts].reverse().join('\\s*');
             patterns.push(reversePattern);
 
             searchPatterns[fullName] = {
@@ -48,14 +90,8 @@ export async function parsePdfForStudents(pdfBuffer, studentInfo) {
         // Extract text for each page and find matches
         for (let pageNum = 0; pageNum < totalPages; pageNum++) {
             try {
-                // Create a single-page PDF to extract text
-                const singlePageDoc = await PDFDocument.create();
-                const [copiedPage] = await singlePageDoc.copyPages(pdfDoc, [pageNum]);
-                singlePageDoc.addPage(copiedPage);
-                
-                const singlePageBytes = await singlePageDoc.save();
-                const pageData = await pdfParse(singlePageBytes);
-                const pageText = pageData.text;
+                // Extract text from the page
+                const pageText = await extractPageText(pdfDoc, pageNum);
                 const pageTextLower = pageText.toLowerCase();
 
                 let matchedStudent = null;

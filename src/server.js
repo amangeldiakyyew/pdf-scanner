@@ -299,13 +299,24 @@ app.get("/api/download-pdf/:reportId", async (c) => {
 			return c.json({ success: false, error: "Report not found" }, 404);
 		}
 
+		// Sanitize filename - remove/replace problematic characters
+		const sanitizedFileName = report.fileNameStudent
+			.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_") // Replace invalid filename chars
+			.replace(/\s+/g, "_"); // Replace spaces with underscores
+
+		// Encode filename for Content-Disposition (RFC 5987)
+		const encodedFileName = encodeURIComponent(sanitizedFileName);
+
 		return new Response(report.pdfBytes, {
 			headers: {
 				"Content-Type": "application/pdf",
-				"Content-Disposition": `attachment; filename="${report.fileNameStudent}"`,
+				"Content-Length": report.pdfBytes.length.toString(),
+				"Content-Disposition": `attachment; filename="${sanitizedFileName}"; filename*=UTF-8''${encodedFileName}`,
+				"Cache-Control": "no-cache",
 			},
 		});
 	} catch (error) {
+		console.error("Single PDF download error:", error);
 		return c.json({ success: false, error: error.message }, 500);
 	}
 });
@@ -327,12 +338,6 @@ app.get("/api/download-zip/:namingMode", async (c) => {
 
 		const archive = archiver("zip", { zlib: { level: 9 } });
 
-		// Set response headers
-		const headers = {
-			"Content-Type": "application/zip",
-			"Content-Disposition": `attachment; filename="reports_${namingMode}.zip"`,
-		};
-
 		// Track duplicate names
 		const nameCounts = {};
 
@@ -342,19 +347,38 @@ app.get("/api/download-zip/:namingMode", async (c) => {
 					? report.fileNameSchoolNo
 					: report.fileNameStudent;
 
+			// Sanitize filename for ZIP entry
+			const sanitizedFileName = fileName
+				.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_")
+				.replace(/\s+/g, "_");
+
 			// Handle duplicates within ZIP
-			let finalName = fileName;
-			if (nameCounts[fileName]) {
-				nameCounts[fileName]++;
-				finalName = fileName.replace(".pdf", `_${nameCounts[fileName]}.pdf`);
+			let finalName = sanitizedFileName;
+			if (nameCounts[sanitizedFileName]) {
+				nameCounts[sanitizedFileName]++;
+				finalName = sanitizedFileName.replace(
+					".pdf",
+					`_${nameCounts[sanitizedFileName]}.pdf`,
+				);
 			} else {
-				nameCounts[fileName] = 1;
+				nameCounts[sanitizedFileName] = 1;
 			}
 
 			archive.append(report.pdfBytes, { name: finalName });
 		}
 
 		await archive.finalize();
+
+		// Create safe filename for the ZIP itself
+		const zipFileName = `reports_${namingMode}.zip`;
+		const encodedZipFileName = encodeURIComponent(zipFileName);
+
+		// Set response headers with proper encoding
+		const headers = {
+			"Content-Type": "application/zip",
+			"Content-Disposition": `attachment; filename="${zipFileName}"; filename*=UTF-8''${encodedZipFileName}`,
+			"Cache-Control": "no-cache",
+		};
 
 		return new Response(archive, { headers });
 	} catch (error) {
