@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Ayrıştırma</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <h2>📚 Menü</h2>
+            <a href="/settings">📂 Ayarlar</a>
+            <a href="/pdf-parsing" class="active">⚙️ PDF Ayrıştırma</a>
+        </nav>
+
+        <main class="main-content">
+            <h1>⚙️ PDF Ayrıştırma ve Rapor Yönetimi</h1>
+            <hr>
+
+            <!-- Class Selection Section -->
+            <section class="section">
+                <h2>1. Sınıf Seçimi ve Liste Hazırlama</h2>
+                
+                <div class="form-group">
+                    <label for="classSelectPdf">Ayrıştırma Yapılacak Sınıfı Seçin</label>
+                    <select id="classSelectPdf" class="form-control">
+                        <option value="">-- Yükleniyor --</option>
+                    </select>
+                </div>
+
+                <div id="classInfo" class="alert alert-info" style="display: none;">
+                    <strong id="studentCount">0</strong> öğrenci bu sınıfta bulundu.
+                </div>
+            </section>
+
+            <hr>
+
+            <!-- PDF Upload Section -->
+            <section class="section">
+                <h2>2. PDF Dosyası Yükleme ve Başlatma</h2>
+                
+                <div class="form-group">
+                    <label for="pdfFile">Raporlar PDF Dosyasını Yükleyin</label>
+                    <input type="file" id="pdfFile" class="form-control" accept=".pdf">
+                </div>
+
+                <div id="uploadInfo" class="alert alert-success" style="display: none;"></div>
+
+                <button id="parseButton" onclick="parsePdf()" class="btn btn-primary" disabled>
+                    Ayrıştırma İşlemini Başlat
+                </button>
+
+                <div id="loadingSpinner" class="spinner" style="display: none;">
+                    <div class="spinner-border"></div>
+                    <span>Sayfalar taranıyor ve sonuçlar ayrıştırılıyor...</span>
+                </div>
+            </section>
+
+            <hr>
+
+            <!-- Results Section -->
+            <section class="section" id="resultsSection" style="display: none;">
+                <h2>3. İşlem Sonucu ve Raporlama</h2>
+
+                <!-- Missing Students -->
+                <div id="missingStudents" class="alert alert-warning" style="display: none;">
+                    <h3>❌ Bulunamayan Öğrenciler</h3>
+                    <p id="missingCount"></p>
+                    <div id="missingList"></div>
+                    <div class="alert alert-info">
+                        İpucu: PDF'deki isimler, Ayarlar'daki isimlerle tam olarak eşleşmelidir.
+                    </div>
+                </div>
+
+                <!-- Found Reports -->
+                <div id="foundReports" style="display: none;">
+                    <h3>🔎 Bulunan Kayıtlar (<span id="foundCount">0</span> Adet)</h3>
+
+                    <div id="duplicateWarning" class="alert alert-warning" style="display: none;">
+                        ⚠️ <strong>DİKKAT! Mükerrer Kayıtlar Olabilir, Kontrol Edin.</strong> Aynı Okul No'ya ait birden fazla sayfa bulunmuştur. Dosya adları numaralandırılmıştır.
+                    </div>
+
+                    <div class="download-buttons">
+                        <button onclick="downloadZip('schoolNo')" class="btn btn-primary">
+                            📁 ZIP İndir (SADECE OKUL NO)
+                        </button>
+                        <button onclick="downloadZip('name')" class="btn btn-secondary">
+                            📁 ZIP İndir (İSİM SOYİSİM)
+                        </button>
+                    </div>
+
+                    <hr>
+
+                    <h4>Bulunan Kayıtlar ve Yönetimi (Silme İşlemi)</h4>
+                    
+                    <div class="table-container">
+                        <table class="table reports-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%;">Aranan Öğrenci</th>
+                                    <th style="width: 30%;">PDF'teki Eşleşme Bağlamı</th>
+                                    <th style="width: 15%;">Okul No Adı</th>
+                                    <th style="width: 10%;">İndir</th>
+                                    <th style="width: 10%;">Sil</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script src="/js/pdf-parsing.js"></script>
+</body>
+</html>
+

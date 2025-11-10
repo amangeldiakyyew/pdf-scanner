@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ayarlar - Öğrenci Yönetimi</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <h2>📚 Menü</h2>
+            <a href="/settings" class="active">📂 Ayarlar</a>
+            <a href="/pdf-parsing">⚙️ PDF Ayrıştırma</a>
+        </nav>
+
+        <main class="main-content">
+            <h1>⚙️ Ayarlar ve Veri Yönetimi</h1>
+            <hr>
+
+            <!-- Class Management Section -->
+            <section class="section">
+                <h2>1. Sınıf Seçimi ve Yönetimi</h2>
+                
+                <div class="form-group">
+                    <label for="classSelect">Düzenlenecek Sınıfı Seçin</label>
+                    <select id="classSelect" class="form-control">
+                        <option value="">-- Yükle niyor --</option>
+                    </select>
+                </div>
+
+                <div id="newClassForm" class="card" style="display: none;">
+                    <h3>Yeni Sınıf Oluştur</h3>
+                    <div class="form-group">
+                        <label for="newClassName">Yeni Sınıf Adı</label>
+                        <input type="text" id="newClassName" class="form-control" placeholder="Örn: 5-A">
+                    </div>
+                    <button onclick="createClass()" class="btn btn-primary">Sınıfı Oluştur</button>
+                </div>
+
+                <div id="deleteClassSection" style="display: none; margin-top: 20px;">
+                    <button onclick="deleteClass()" class="btn btn-danger">Sınıfı SİL (Tüm Öğrencilerle Birlikte)</button>
+                </div>
+            </section>
+
+            <hr>
+
+            <!-- Student Management Section -->
+            <section class="section" id="studentSection" style="display: none;">
+                <h2 id="studentSectionTitle">2. Öğrenci İşlemleri</h2>
+
+                <div class="tabs">
+                    <button class="tab-button active" onclick="switchTab('add')">Tek Öğrenci Ekle</button>
+                    <button class="tab-button" onclick="switchTab('edit')">Mevcut Öğrenciyi Düzenle/Sil</button>
+                    <button class="tab-button" onclick="switchTab('bulk')">Excel ile Toplu Yükleme</button>
+                </div>
+
+                <!-- Add Student Tab -->
+                <div id="addTab" class="tab-content active">
+                    <div class="card">
+                        <h3>Yeni Öğrenci Detayları</h3>
+                        <form id="addStudentForm" onsubmit="addStudent(event)">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Öğrenci Adı Soyadı (Tam)</label>
+                                    <input type="text" id="addName" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Okul No</label>
+                                    <input type="text" id="addSchoolNo" class="form-control" required>
+                                </div>
+                            </div>
+
+                            <h4>Veli Bilgileri</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Anne Adı Soyadı</label>
+                                    <input type="text" id="addMotherName" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Anne E-posta</label>
+                                    <input type="email" id="addMotherEmail" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Anne Telefon</label>
+                                    <input type="tel" id="addMotherPhone" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Baba Adı Soyadı</label>
+                                    <input type="text" id="addFatherName" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Baba E-posta</label>
+                                    <input type="email" id="addFatherEmail" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Baba Telefon</label>
+                                    <input type="tel" id="addFatherPhone" class="form-control">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">Öğrenciyi Ekle/Güncelle</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Edit Student Tab -->
+                <div id="editTab" class="tab-content">
+                    <div class="card">
+                        <div class="form-group">
+                            <label for="editStudentSelect">Düzenlenecek Öğrenciyi Seçin</label>
+                            <select id="editStudentSelect" class="form-control" onchange="loadStudentForEdit()">
+                                <option value="">-- Öğrenci Seçin --</option>
+                            </select>
+                        </div>
+
+                        <form id="editStudentForm" onsubmit="updateStudent(event)" style="display: none;">
+                            <h3>Öğrenci Kaydını Düzenle</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Adı Soyadı</label>
+                                    <input type="text" id="editName" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Okul No</label>
+                                    <input type="text" id="editSchoolNo" class="form-control" required>
+                                </div>
+                            </div>
+
+                            <h4>Veli Bilgileri</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Anne Adı Soyadı</label>
+                                    <input type="text" id="editMotherName" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Anne E-posta</label>
+                                    <input type="email" id="editMotherEmail" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Anne Telefon</label>
+                                    <input type="tel" id="editMotherPhone" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Baba Adı Soyadı</label>
+                                    <input type="text" id="editFatherName" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Baba E-posta</label>
+                                    <input type="email" id="editFatherEmail" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Baba Telefon</label>
+                                    <input type="tel" id="editFatherPhone" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <button type="submit" class="btn btn-primary">Detayları GÜNCELLE</button>
+                                <button type="button" onclick="deleteStudent()" class="btn btn-danger">Öğrenciyi SİL</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Bulk Upload Tab -->
+                <div id="bulkTab" class="tab-content">
+                    <div class="card">
+                        <div class="alert alert-info">
+                            Toplu yükleme için Excel dosyanızın aşağıdaki sütun başlıklarını içermesi gerekir:<br>
+                            <strong>Ad Soyad, Okul No, Anne Adı Soyadı, Anne E-posta, Anne Telefon, Baba Adı Soyadı, Baba E-posta, Baba Telefon</strong>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="excelFile">Öğrenci Listesini Yükleyin (Excel/xlsx)</label>
+                            <input type="file" id="excelFile" class="form-control" accept=".xlsx,.xls">
+                        </div>
+
+                        <button onclick="uploadExcel()" class="btn btn-primary">Excel Listesini Kaydet ve Mevcut Kayıtlarla Güncelle</button>
+                    </div>
+                </div>
+
+                <!-- Current Students Table -->
+                <div class="card" id="studentsTableCard" style="display: none;">
+                    <h3 id="studentsTableTitle">Tüm Kayıtlar Tablosu</h3>
+                    <div class="table-container">
+                        <table id="studentsTable" class="table">
+                            <thead>
+                                <tr>
+                                    <th>Ad Soyad</th>
+                                    <th>Okul No</th>
+                                    <th>Anne Adı Soyadı</th>
+                                    <th>Anne E-posta</th>
+                                    <th>Anne Telefon</th>
+                                    <th>Baba Adı Soyadı</th>
+                                    <th>Baba E-posta</th>
+                                    <th>Baba Telefon</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script src="/js/settings.js"></script>
+</body>
+</html>
+
